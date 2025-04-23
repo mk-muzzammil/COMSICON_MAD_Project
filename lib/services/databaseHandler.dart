@@ -1,6 +1,7 @@
 // lib/services/databaseService.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:comsicon/services/cloudinaryServices.dart';
+import 'package:comsicon/services/gemini_service.dart';
 import 'package:comsicon/utils/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,31 @@ class DatabaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CloudinaryService _cloudinaryService = CloudinaryService();
+  final GeminiService _geminiService = GeminiService();
+
+  // Update lesson with AI-generated content
+  Future<bool> updateLessonWithAIContent({
+    required String lessonId,
+    required String content,
+  }) async {
+    try {
+      // Generate summary and flashcards
+      final summary = await _geminiService.generateSummary(content);
+      final flashcards = await _geminiService.generateFlashcards(content);
+
+      // Update the lesson in Firestore
+      await _firestore.collection('lessons').doc(lessonId).update({
+        'summary': summary,
+        'flashcards': flashcards,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Error updating lesson with AI content: $e');
+      return false;
+    }
+  }
 
   // AUTH METHODS
   Future<bool> login({
@@ -453,15 +479,34 @@ class DatabaseService {
             1;
       }
 
+      // Generate AI content for text lessons
+      String summary = '';
+      List<Map<String, String>> flashcards = [];
+
+      if (contentType == 'text' && content.isNotEmpty) {
+        // Show a processing message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Generating AI summary...')),
+        );
+
+        // Generate summary
+        summary = await _geminiService.generateSummary(content);
+
+        // Generate flashcards for longer content
+        if (content.length > 100) {
+          flashcards = await _geminiService.generateFlashcards(content);
+        }
+      }
+
       // Create the lesson document
-      await _firestore.collection('lessons').add({
+      DocumentReference docRef = await _firestore.collection('lessons').add({
         'courseId': courseId,
         'title': title,
         'contentType': contentType,
         'content': content,
         'contentUrl': fileUrl ?? '',
-        'summary': '', // Will be filled with AI-generated content later
-        'flashcards': [], // Will be filled with AI-generated content later
+        'summary': summary,
+        'flashcards': flashcards,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'order': newOrder,

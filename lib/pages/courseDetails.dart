@@ -471,61 +471,229 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
         break;
     }
 
+    // Check if this is a text lesson without an AI summary
+    bool needsAIContent =
+        lesson['contentType'] == 'text' &&
+        (lesson['summary'] == null || lesson['summary'].isEmpty);
+
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: Colors.indigo.withOpacity(0.1),
-          child: Icon(contentIcon, color: Colors.indigo),
-        ),
-        title: Text(
-          lesson['title'] ?? 'Untitled Lesson',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 4),
-            Text(contentTypeText),
-            SizedBox(height: 4),
-            if (lesson['createdAt'] != null)
-              Text(
-                'Added: ${DateFormat('MMM d, yyyy').format((lesson['createdAt'] as Timestamp).toDate())}',
-                style: TextStyle(fontSize: 12),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: CircleAvatar(
+              backgroundColor: Colors.indigo.withOpacity(0.1),
+              child: Icon(contentIcon, color: Colors.indigo),
+            ),
+            title: Text(
+              lesson['title'] ?? 'Untitled Lesson',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 4),
+                Text(contentTypeText),
+                SizedBox(height: 4),
+                if (lesson['createdAt'] != null)
+                  Text(
+                    'Added: ${DateFormat('MMM d, yyyy').format((lesson['createdAt'] as Timestamp).toDate())}',
+                    style: TextStyle(fontSize: 12),
+                  ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () {
+                    // Edit lesson functionality could be added later
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Edit lesson feature coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _showDeleteLessonConfirmation(lesson['id']),
+                ),
+              ],
+            ),
+            onTap: () {
+              // View lesson details
+              _showLessonDetails(lesson);
+            },
+          ),
+
+          // Add the Generate AI Content button here if needed
+          if (needsAIContent)
+            Padding(
+              padding: const EdgeInsets.only(
+                bottom: 12.0,
+                left: 16.0,
+                right: 16.0,
               ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(Icons.edit, color: Colors.blue),
-              onPressed: () {
-                // Edit lesson functionality could be added later
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Edit lesson feature coming soon')),
-                );
-              },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      icon: Icon(Icons.auto_awesome, color: Colors.indigo),
+                      label: Text('Generate AI Content'),
+                      onPressed: () async {
+                        // Show loading indicator
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Generating AI content...')),
+                        );
+
+                        // Call the method to generate and update AI content
+                        final success = await _databaseService
+                            .updateLessonWithAIContent(
+                              lessonId: lesson['id'],
+                              content: lesson['content'],
+                            );
+
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'AI content generated successfully',
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to generate AI content'),
+                            ),
+                          );
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.indigo.withOpacity(0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _showDeleteLessonConfirmation(lesson['id']),
-            ),
-          ],
-        ),
-        onTap: () {
-          // View lesson details
-          _showLessonDetails(lesson);
-        },
+        ],
       ),
     );
   }
 
   void _showLessonDetails(Map<String, dynamic> lesson) {
-    // Your existing lesson details modal
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: EdgeInsets.all(16),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  // Other lesson content display...
+
+                  // AI Summary Section
+                  SizedBox(height: 32),
+                  Text(
+                    'AI-Generated Summary:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      lesson['summary'] != null && lesson['summary'].isNotEmpty
+                          ? lesson['summary']
+                          : 'AI summary not available yet.',
+                      style: TextStyle(
+                        fontStyle:
+                            lesson['summary'] == null ||
+                                    lesson['summary'].isEmpty
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                      ),
+                    ),
+                  ),
+
+                  // Flashcards Section
+                  SizedBox(height: 24),
+                  Text(
+                    'AI-Generated Flashcards:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+
+                  // If there are flashcards, display them
+                  if (lesson['flashcards'] != null &&
+                      lesson['flashcards'] is List &&
+                      (lesson['flashcards'] as List).isNotEmpty)
+                    ...buildFlashcards(lesson['flashcards']),
+
+                  // If no flashcards are available
+                  if (lesson['flashcards'] == null ||
+                      !(lesson['flashcards'] is List) ||
+                      (lesson['flashcards'] as List).isEmpty)
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Flashcards not available yet.',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<Widget> buildFlashcards(List flashcards) {
+    return flashcards.map<Widget>((card) {
+      return Card(
+        margin: EdgeInsets.only(bottom: 12),
+        child: ExpansionTile(
+          title: Text(
+            card['question'] ?? 'Question',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          children: [
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(card['answer'] ?? 'Answer'),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   void _showDeleteLessonConfirmation(String lessonId) {
