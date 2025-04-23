@@ -98,7 +98,7 @@ class DatabaseService {
     }
   }
 
-  // Save profile data to Firestore (handles both initial setup and updates)
+  // Save profile data to Firestore
   Future<bool> saveProfileData({
     required String Name,
     required String Role,
@@ -114,7 +114,7 @@ class DatabaseService {
     }
 
     try {
-      // Create user document in Firestore
+      // Create the data map
       Map<String, dynamic> userData = {
         'displayName': Name,
         'email': user.email,
@@ -122,7 +122,7 @@ class DatabaseService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Only add photoURL if it's provided
+      // Only add photoURL if it's provided and not empty
       if (PhotoURL != null && PhotoURL.isNotEmpty) {
         userData['photoURL'] = PhotoURL;
       }
@@ -136,7 +136,7 @@ class DatabaseService {
         userData['createdAt'] = FieldValue.serverTimestamp();
       }
 
-      // Set or update the user document
+      // Use set with merge option to handle both new and existing documents
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -149,6 +149,7 @@ class DatabaseService {
       Navigator.of(context).pushReplacementNamed('/home');
       return true;
     } catch (error) {
+      print('Error saving profile data: $error');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save profile data: $error')),
       );
@@ -189,27 +190,53 @@ class DatabaseService {
       print('Starting upload to Cloudinary...');
       print('Upload preset: ${AppConstants.cloudinaryUploadPreset}');
 
-      // Simple upload first - no folder or filename
+      // Upload to Cloudinary
       final CloudinaryService cloudinaryService = CloudinaryService();
       final String? imageUrl = await cloudinaryService.uploadImage(
         filePath,
         AppConstants.cloudinaryUploadPreset,
+        folder: 'EdTech/Users',
       );
 
       print('Cloudinary upload complete, URL: $imageUrl');
 
       if (imageUrl != null && imageUrl.isNotEmpty) {
-        // Update Firestore with the image URL
-        await _firestore.collection('users').doc(user.uid).update({
-          'photoURL': imageUrl,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        try {
+          // First check if the document exists
+          DocumentSnapshot docSnapshot =
+              await _firestore.collection('users').doc(user.uid).get();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile photo updated successfully!')),
-        );
+          if (docSnapshot.exists) {
+            // If document exists, update it
+            await _firestore.collection('users').doc(user.uid).update({
+              'photoURL': imageUrl,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // If document doesn't exist, create it with set()
+            await _firestore.collection('users').doc(user.uid).set({
+              'photoURL': imageUrl,
+              'email': user.email,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
 
-        return imageUrl;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile photo updated successfully!'),
+            ),
+          );
+
+          return imageUrl;
+        } catch (firestoreError) {
+          print('Firestore error: $firestoreError');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error saving photo URL: $firestoreError')),
+          );
+          // Still return the URL even if Firestore update failed
+          return imageUrl;
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to upload profile photo')),

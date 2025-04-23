@@ -21,6 +21,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String? _selectedRole;
   File? _imageFile;
   bool _isLoading = false;
+  bool _isUploading = false;
+  String? _uploadedImageUrl;
 
   @override
   void dispose() {
@@ -33,13 +35,40 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70, // Reduce quality for faster uploads
+        imageQuality: 80,
       );
 
       if (image != null) {
         setState(() {
           _imageFile = File(image.path);
+          _isUploading = true;
         });
+
+        try {
+          // Upload the image immediately after selection
+          final imageUrl = await _databaseService.uploadProfilePhoto(
+            filePath: image.path,
+            context: context,
+          );
+
+          if (imageUrl != null) {
+            setState(() {
+              _uploadedImageUrl = imageUrl;
+              _isUploading = false;
+            });
+          } else {
+            setState(() {
+              _isUploading = false;
+            });
+          }
+        } catch (e) {
+          setState(() {
+            _isUploading = false;
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to upload image: $e')));
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -55,56 +84,25 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       });
 
       try {
-        // Step 1: Upload image to Cloudinary if selected
-        String? photoURL;
-        if (_imageFile != null) {
-          try {
-            // Ensure the CloudinaryService is properly initialized
-            await _databaseService.uploadProfilePhoto(
-              filePath: _imageFile!.path,
-              context: context,
-            );
-
-            // Fetch the user data to get the uploaded image URL
-            final userData = await _databaseService.fetchUserData();
-            photoURL = userData?['photoURL'];
-
-            // If the upload failed or URL was not saved properly
-            if (photoURL == null || photoURL.isEmpty) {
-              throw Exception("Failed to get uploaded image URL");
-            }
-          } catch (e) {
-            // Log the error but continue with profile setup
-            print('Image upload error: $e');
-            // Show a message but don't stop the process
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Warning: Image upload failed, continuing with profile setup',
-                ),
-              ),
-            );
-          }
-        }
-
-        // Step 2: Save profile data
+        // Save the profile data - now passing the photoURL if available
         await _databaseService.saveProfileData(
           Name: _nameController.text,
           Role: _selectedRole!,
+          PhotoURL: _uploadedImageUrl, // Pass the URL from the earlier upload
           context: context,
         );
+
+        // Navigation will be handled in saveProfileData
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error setting up profile: $e')));
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
+        setState(() {
+          _isLoading = false;
+        });
       }
     } else {
+      // Show validation errors or missing role selection
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete the profile setup')),
       );
@@ -153,23 +151,43 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Circle Avatar with Image Picker
+                        // Circle Avatar with Image Picker and upload indicator
                         Center(
                           child: Stack(
                             alignment: Alignment.bottomRight,
                             children: [
                               GestureDetector(
-                                onTap: _pickImage,
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  backgroundColor: theme.colorScheme.surface,
-                                  backgroundImage:
-                                      _imageFile != null
-                                          ? FileImage(_imageFile!)
-                                          : const AssetImage(
-                                                'assets/images/Avatar.png',
-                                              )
-                                              as ImageProvider,
+                                onTap: _isUploading ? null : _pickImage,
+                                child: Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: theme.colorScheme.surface,
+                                  ),
+                                  child:
+                                      _isUploading
+                                          ? Center(
+                                            child: CircularProgressIndicator(
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          )
+                                          : ClipOval(
+                                            child:
+                                                _imageFile != null
+                                                    ? Image.file(
+                                                      _imageFile!,
+                                                      width: 120,
+                                                      height: 120,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                    : Image.asset(
+                                                      'assets/images/Avatar.png',
+                                                      width: 120,
+                                                      height: 120,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                          ),
                                 ),
                               ),
                               Container(
@@ -180,7 +198,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Icon(
-                                    Icons.camera_alt,
+                                    _isUploading
+                                        ? Icons.hourglass_top
+                                        : Icons.camera_alt,
                                     color: theme.colorScheme.onPrimary,
                                     size: 20,
                                   ),
@@ -189,6 +209,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             ],
                           ),
                         ),
+                        if (_uploadedImageUrl != null)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                'Image uploaded successfully!',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 24),
 
                         // Name input field
@@ -259,12 +292,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleContinue,
+                            onPressed:
+                                (_isLoading || _isUploading)
+                                    ? null
+                                    : _handleContinue,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.colorScheme.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
+                              disabledBackgroundColor: theme.colorScheme.primary
+                                  .withOpacity(0.5),
                             ),
                             child:
                                 _isLoading
