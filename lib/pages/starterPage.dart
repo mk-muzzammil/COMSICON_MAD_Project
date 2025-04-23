@@ -23,6 +23,7 @@ class edTech extends StatelessWidget {
                     child: Image.asset(
                       'assets/images/illustration.png',
                       height: 300,
+                      fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(height: 60),
@@ -31,7 +32,7 @@ class edTech extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Habit tracker 🙌",
+                        "Ed Tech 📚",
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -40,15 +41,15 @@ class edTech extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        "The best time to start is now!",
+                        "The best time to start learning is now!",
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
-                        "You’re taking the first step in changing your life.\nLet us guide you through it.",
+                        "You’re taking the first step in changing your life. Let us guide you through it.",
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -58,7 +59,7 @@ class edTech extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
 
               // Bottom Button
               ElevatedButton(
@@ -76,7 +77,7 @@ class edTech extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  "Let’s do it",
+                  "Let’s get Started",
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

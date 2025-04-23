@@ -104,7 +104,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     );
                   }),
                 ),
-                const SizedBox(height: 24.0),
+                const SizedBox(height: 30),
 
                 // Text Section
                 Padding(
@@ -113,7 +113,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        'Develop good habits',
+                        'Learn with the Experts',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontSize: size.width * 0.06,
                           fontWeight: FontWeight.bold,
@@ -122,7 +122,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                       ),
                       const SizedBox(height: 8.0),
                       Text(
-                        'Habits are a fundamental part of our life. Make the most of your life!',
+                        'Develop a passion for learning. If you do, you will never cease to grow!',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: size.width * 0.04,
                         ),

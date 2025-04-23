@@ -1,10 +1,12 @@
 import 'package:comsicon/firebase_options.dart';
 import 'package:comsicon/pages/authenticationPage.dart';
+import 'package:comsicon/pages/courseDetails.dart';
 import 'package:comsicon/pages/homePage.dart';
 import 'package:comsicon/pages/loginPage.dart';
 import 'package:comsicon/pages/profileSetupPage.dart';
 import 'package:comsicon/pages/signupPage.dart';
 import 'package:comsicon/pages/starterPage.dart';
+import 'package:comsicon/pages/tutorDashboard.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -74,6 +76,8 @@ class _MyAppState extends State<MyApp> {
             (context) => const ProfileSetupScreen(), // Your profile setup page
         // Add all your other routes here, for example:
         '/home': (context) => HomePage(),
+        '/tutorDashboard': (context) => TutorDashboard(),
+        '/studentDashboard': (context) => TutorDashboard(),
         // '/login': (context) => LoginPage(),
         // '/signup': (context) => SignupPage(),
         // '/settings': (context) => SettingsPage(
@@ -81,6 +85,16 @@ class _MyAppState extends State<MyApp> {
         //   onDarkModeToggled: toggleTheme,
         // ),
         // Add more routes as needed
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/courseDetails') {
+          // Extract the courseId from arguments
+          final String courseId = settings.arguments as String;
+          return MaterialPageRoute(
+            builder: (context) => CourseDetailsScreen(courseId: courseId),
+          );
+        }
+        return null;
       },
     );
   }
