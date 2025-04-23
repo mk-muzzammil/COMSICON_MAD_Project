@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "683253510391",
+    "project_id": "comsicon-77787",
+    "storage_bucket": "comsicon-77787.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:683253510391:android:3771f26ef778bbbb94a3f2",
+        "android_client_info": {
+          "package_name": "com.example.comsicon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQQDt3DWrR5hTXG1SbeDsdyQgVn0K1jm4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
