@@ -49,10 +49,10 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/splash_frame.png', height: 150),
+              Image.asset('assets/icons/Splash_Logo.png', height: 150),
               const SizedBox(height: 20),
               Text(
-                '18 Days Challenges',
+                'EdTech',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
