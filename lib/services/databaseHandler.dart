@@ -1,127 +1,243 @@
-// import 'package:comsicon/services/cloudinaryServices.dart';
-// import 'package:comsicon/utils/constants.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/material.dart';
-// // import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:comsicon/services/cloudinaryServices.dart';
+import 'package:comsicon/utils/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-// class DatabaseService {
-//   final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Auth instance
+class DatabaseService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final CloudinaryService _cloudinaryService = CloudinaryService();
 
-//   // ------------------- AUTH METHODS (unchanged) -------------------
-//   Future<bool> login({
-//     required String email,
-//     required String password,
-//     required BuildContext context,
-//   }) async {
-//     try {
-//       final UserCredential userCredential = await _auth
-//           .signInWithEmailAndPassword(email: email, password: password);
+  // AUTH METHODS (unchanged)
+  Future<bool> login({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    try {
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
 
-//       if (userCredential.user != null) {
-//         ScaffoldMessenger.of(
-//           context,
-//         ).showSnackBar(SnackBar(content: Text('Logged in successfully!')));
-//         Navigator.pushNamed(context, '/home');
-//         return true; // Indicate success
-//       }
-//     } on FirebaseAuthException catch (e) {
-//       ScaffoldMessenger.of(
-//         context,
-//       ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
-//       return false; // Indicate failure
-//     }
-//     return false;
-//   }
+      if (userCredential.user != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Logged in successfully!')));
+        Navigator.pushNamed(context, '/home');
+        return true;
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
+      return false;
+    }
+    return false;
+  }
 
-//   Future<bool> signUp({
-//     required String email,
-//     required String password,
-//     required BuildContext context,
-//   }) async {
-//     try {
-//       final UserCredential credential = await _auth
-//           .createUserWithEmailAndPassword(email: email, password: password);
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    try {
+      final UserCredential credential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-//       if (credential.user != null) {
-//         ScaffoldMessenger.of(
-//           context,
-//         ).showSnackBar(SnackBar(content: Text('User created successfully!')));
-//         Navigator.pushNamed(context, '/profileSetup');
-//         return true; // Indicate success
-//       }
-//     } on FirebaseAuthException catch (e) {
-//       ScaffoldMessenger.of(
-//         context,
-//       ).showSnackBar(SnackBar(content: Text('Sign up failed: ${e.message}')));
-//       return false; // Indicate failure
-//     }
-//     return false;
-//   }
+      if (credential.user != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('User created successfully!')));
+        Navigator.pushNamed(context, '/profileSetup');
+        return true;
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Sign up failed: ${e.message}')));
+      return false;
+    }
+    return false;
+  }
 
-//   Future<void> signOut(BuildContext context) async {
-//     try {
-//       await _auth.signOut().then(
-//         (value) => {
-//           ScaffoldMessenger.of(
-//             context,
-//           ).showSnackBar(SnackBar(content: Text('Log Out Successfully'))),
-//           Navigator.pushNamed(context, '/login'),
-//         },
-//       );
-//     } on FirebaseAuthException catch (e) {
-//       ScaffoldMessenger.of(
-//         context,
-//       ).showSnackBar(SnackBar(content: Text('Sign out failed: ${e.message}')));
-//     }
-//   }
+  Future<void> signOut(BuildContext context) async {
+    try {
+      await _auth.signOut().then(
+        (value) => {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Log Out Successfully'))),
+          Navigator.pushNamed(context, '/login'),
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Sign out failed: ${e.message}')));
+    }
+  }
 
-//   // Future<UserCredential?> logInWithGoogle(BuildContext context) async {
-//   //   try {
-//   //     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-//   //     if (googleUser == null) return null; // User canceled sign-in
+  // FIRESTORE USER DATA METHODS
 
-//   //     final GoogleSignInAuthentication googleAuth =
-//   //         await googleUser.authentication;
+  // Fetch user data from Firestore
+  Future<Map<String, dynamic>?> fetchUserData() async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        DocumentSnapshot userDoc =
+            await _firestore.collection('users').doc(currentUser.uid).get();
 
-//   //     final AuthCredential credential = GoogleAuthProvider.credential(
-//   //       accessToken: googleAuth.accessToken,
-//   //       idToken: googleAuth.idToken,
-//   //     );
+        if (userDoc.exists) {
+          return userDoc.data() as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching user data: $e');
+      return null;
+    }
+  }
 
-//   //     final UserCredential userCredential =
-//   //         await _auth.signInWithCredential(credential);
-//   //     final User? user = userCredential.user;
+  // Save profile data to Firestore (handles both initial setup and updates)
+  Future<bool> saveProfileData({
+    required String Name,
+    required String Role,
+    String? PhotoURL,
+    required BuildContext context,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('User is not logged in')));
+      return false;
+    }
 
-//   //     if (user != null) {
-//   //       // Store user information in Firebase Realtime Database
-//   //       await _database.child('users').child(user.uid).set({
-//   //         'displayName': user.displayName,
-//   //         'email': user.email,
-//   //         'photoURL': user.photoURL,
-//   //       });
-//   //     }
+    try {
+      // Create user document in Firestore
+      Map<String, dynamic> userData = {
+        'displayName': Name,
+        'email': user.email,
+        'role': Role,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-//   //     return userCredential;
-//   //   } on FirebaseAuthException catch (e) {
-//   //     ScaffoldMessenger.of(context).showSnackBar(
-//   //       SnackBar(content: Text('Google sign-in failed: ${e.message}')),
-//   //     );
-//   //   }
-//   //   return null;
-//   // }
+      // Only add photoURL if it's provided
+      if (PhotoURL != null && PhotoURL.isNotEmpty) {
+        userData['photoURL'] = PhotoURL;
+      }
 
-//   // If you upload images to Cloudinary
-//   // Future<String?> uploadChallengeImage(String filePath) async {
-//   //   try {
-//   //     final CloudinaryService cloudinaryService = CloudinaryService();
-//   //     final String? imageUrl = await cloudinaryService.uploadImage(
-//   //       filePath,
-//   //       AppConstants.cloudinaryUploadPreset,
-//   //       fileName: 'challenge_image_${DateTime.now().millisecondsSinceEpoch}',
-//   //     );
-//   //     return imageUrl;
-//   //   } catch (e) {
-//   //     throw Exception("Failed to upload challenge image: $e");
-//   //   }
-//   // }
-// }
+      // Check if this is a new user
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        // Add createdAt for new users
+        userData['createdAt'] = FieldValue.serverTimestamp();
+      }
+
+      // Set or update the user document
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile data saved successfully')),
+      );
+
+      Navigator.of(context).pushReplacementNamed('/home');
+      return true;
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save profile data: $error')),
+      );
+      return false;
+    }
+  }
+
+  // Update specific user data fields
+  Future<void> updateUserData(Map<String, dynamic> data) async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        // Add timestamp for when the document was updated
+        data['updatedAt'] = FieldValue.serverTimestamp();
+
+        await _firestore.collection('users').doc(currentUser.uid).update(data);
+      }
+    } catch (e) {
+      print('Error updating user data: $e');
+      throw e;
+    }
+  }
+
+  // Upload profile photo to Cloudinary and update user profile in Firestore
+  Future<String?> uploadProfilePhoto({
+    required String filePath,
+    required BuildContext context,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('User is not logged in')));
+      return null;
+    }
+
+    try {
+      print('Starting upload to Cloudinary...');
+      print('Upload preset: ${AppConstants.cloudinaryUploadPreset}');
+
+      // Simple upload first - no folder or filename
+      final CloudinaryService cloudinaryService = CloudinaryService();
+      final String? imageUrl = await cloudinaryService.uploadImage(
+        filePath,
+        AppConstants.cloudinaryUploadPreset,
+      );
+
+      print('Cloudinary upload complete, URL: $imageUrl');
+
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        // Update Firestore with the image URL
+        await _firestore.collection('users').doc(user.uid).update({
+          'photoURL': imageUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated successfully!')),
+        );
+
+        return imageUrl;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload profile photo')),
+        );
+        return null;
+      }
+    } catch (e) {
+      print('Profile photo upload error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error uploading photo: $e')));
+      return null;
+    }
+  }
+
+  // Upload challenge image to Cloudinary
+  Future<String?> uploadChallengeImage(String filePath) async {
+    try {
+      final String? imageUrl = await _cloudinaryService.uploadImage(
+        filePath,
+        AppConstants.cloudinaryUploadPreset,
+        fileName: 'challenge_${DateTime.now().millisecondsSinceEpoch}',
+        folder: 'EdTech/Challenges',
+      );
+      return imageUrl;
+    } catch (e) {
+      print('Challenge image upload error: $e');
+      throw Exception("Failed to upload challenge image: $e");
+    }
+  }
+}
