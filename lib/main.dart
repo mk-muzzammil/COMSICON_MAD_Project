@@ -6,6 +6,7 @@ import 'package:comsicon/pages/loginPage.dart';
 import 'package:comsicon/pages/profileSetupPage.dart';
 import 'package:comsicon/pages/signupPage.dart';
 import 'package:comsicon/pages/starterPage.dart';
+import 'package:comsicon/pages/studentDashboard.dart';
 import 'package:comsicon/pages/tutorDashboard.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -77,7 +78,7 @@ class _MyAppState extends State<MyApp> {
         // Add all your other routes here, for example:
         '/home': (context) => HomePage(),
         '/tutorDashboard': (context) => TutorDashboard(),
-        '/studentDashboard': (context) => TutorDashboard(),
+        '/studentDashboard': (context) => StudentDashboard(),
         // '/login': (context) => LoginPage(),
         // '/signup': (context) => SignupPage(),
         // '/settings': (context) => SettingsPage(
